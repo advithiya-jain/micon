@@ -11,14 +11,14 @@ echo "Invalid path"
 exit 1
 fi
 
-function seticon() {
+function setAlbumIcon() {
 	gfind "$1" -type f -iregex '.*/cover\.\(jpg\|jpeg\|png\)$' -print0 | while IFS= read -r -d '' file; do
 		# Extract the filename from the path
 		filename=${file##*/}
 		musicdirpath=${file%/*}/
 		echo "pwd: $(pwd)"
-		echo " seticon music dir: $musicdirpath"
-		echo " seticon argument: $1"
+		echo " setAlbumIcon music dir: $musicdirpath"
+		echo " setAlbumIcon argument: $1"
 		# Change directory to the specified path 
 		# (since we cd later to the directory containing the cover art)
 
@@ -43,6 +43,18 @@ function seticon() {
 	done
 }
 
+function setArtistIcon() {
+	gfind "$1" -type f -iregex '.*/artist\.\(jpg\|jpeg\|png\)$' -print0 | while IFS= read -r -d '' file; do
+		# Extract the filename from the path
+		filename=${file##*/}
+		musicdirpath=${file%/*}/ 
+		
+		fileicon set "$musicdirpath" "$file"
+		
+		cd "$musicdirpath" || exit 1
+	done
+}
+
 # Change directory to the path
 cd "$path" || exit 1
 
@@ -62,7 +74,7 @@ find . -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.m4a" -o -iname 
 
 			# Set the icon if the cover art exists
 			echo "Cover art found for $dirpath"
-			seticon "$dirpath"
+			setAlbumIcon "$dirpath"
 			processed_dirs+=("$dirpath")
 
 		else
@@ -78,15 +90,20 @@ find . -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.m4a" -o -iname 
 			if [[ -f "${script_dir}/cvrFndr.py" ]]; then
 				# First change directory into the Album folder
 				cd "$dirpath" || exit 1
-				# Run the python script
-				python3 "${script_dir}/cvrFndr.py" -a "$artist" -al "$album"
+				# Run the python script to download album art
+				python3 "${script_dir}/cvrFndr.py" -a "$artist" -al "$album" -o 1
 				# Now change directory back to the parent
 				cd .. || exit 1
+				# Now run the python script to download artist cover
+				#python3 "${script_dir}/cvrFndr.py" -a "$artist" -al "$album" -o 2
 			else
 				echo "cvrFndr.py not found"
 				exit 1
 			fi
-			seticon "$dirpath"
+			setAlbumIcon "$dirpath"
+			# get the artist directory path and stor in a variable #artistpath
+			artistpath=$(dirname "$dirpath")
+			setArtistIcon "$artistpath"
 			processed_dirs+=("$dirpath")
 		fi
 	fi
